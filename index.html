@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard (Secure)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: "Poppins", sans-serif; margin:0; background:linear-gradient(135deg,#fdfbfb,#ebedee); }
+    header { background:linear-gradient(90deg,#4e54c8,#8f94fb); padding:15px; color:#fff; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; }
+    header h1 { font-size:1.2em; margin:0; flex:1 0 100%; margin-bottom:8px; }
+    nav a { color:#fff; margin-right:15px; text-decoration:none; font-weight:600; }
+    nav a.active { text-decoration:underline; }
+    main { padding:15px; }
+
+    /* Login */
+    #loginPage { display:flex; align-items:center; justify-content:center; height:100vh; }
+    .login-box { background:#fff; padding:25px; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,0.1); text-align:center; width:100%; max-width:350px; }
+    .login-box h2 { margin-bottom:15px; }
+    .login-box input { width:100%; padding:10px; margin:8px 0; border-radius:6px; border:1px solid #ccc; }
+    .login-box button { width:100%; padding:10px; background:linear-gradient(90deg,#4e54c8,#8f94fb); border:none; color:#fff; font-weight:600; border-radius:6px; cursor:pointer; }
+    .login-box button:hover { opacity:0.9; }
+
+    /* Order Cards */
+    .order { background:#fff; padding:15px; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,0.08); margin-bottom:15px; transition:transform 0.2s; }
+    .order:hover { transform:scale(1.01); }
+    .order strong { font-size:1.1em; display:block; margin-bottom:6px; color:#333; }
+    .meta { font-size:.9em; margin:6px 0; }
+    .items { background:#f1f3f6; padding:8px; border-radius:6px; font-size:.85em; white-space:pre-wrap; word-break:break-word; }
+    .status-badge { display:inline-block; padding:4px 10px; border-radius:20px; font-size:.8em; font-weight:600; margin:6px 0; }
+    .new { background:linear-gradient(90deg,#56ccf2,#2f80ed); color:#fff; }
+    .packaged { background:linear-gradient(90deg,#f7971e,#ffd200); color:#fff; }
+    .delivered { background:linear-gradient(90deg,#11998e,#38ef7d); color:#fff; }
+    select { margin-top:6px; padding:4px 8px; border-radius:6px; border:1px solid #ccc; font-size:.9em; }
+    button { padding:6px 12px; margin-top:8px; background:#dc3545; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:.85em; }
+    button:hover { background:#b52a37; }
+
+    /* Revenue */
+    .card { background:#fff; padding:25px; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,0.08); margin-top:20px; text-align:center; max-width:420px; margin-left:auto; margin-right:auto; }
+    .amount { font-size:2em; background:linear-gradient(90deg,#11998e,#38ef7d); -webkit-background-clip:text; color:transparent; font-weight:700; }
+
+    /* Responsive */
+    @media (max-width:500px){
+      header h1 { font-size:1em; }
+      nav a { margin:0 10px 0 0; font-size:.9em; }
+      .order { font-size:.9em; }
+      .amount { font-size:1.5em; }
+      button, select { width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Page -->
+  <div id="loginPage">
+    <div class="login-box">
+      <h2>🔐 Admin Login</h2>
+      <input type="text" id="adminId" placeholder="Admin ID">
+      <input type="password" id="adminPass" placeholder="Password">
+      <button onclick="login()">Login</button>
+      <p id="loginError" style="color:red; font-size:.9em; margin-top:6px;"></p>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" style="display:none;">
+    <header>
+      <h1>📊 Admin Dashboard</h1>
+      <nav>
+        <a href="#" id="navOrders" class="active">Orders</a>
+        <a href="#" id="navRevenue">Revenue</a>
+      </nav>
+    </header>
+
+    <main>
+      <!-- Orders Page -->
+      <section id="ordersPage">
+        <h2>📦 Orders (Newest First)</h2>
+        <button id="refreshOrders">Refresh</button>
+        <div id="orders"></div>
+      </section>
+
+      <!-- Revenue Page -->
+      <section id="revenuePage" style="display:none;">
+        <h2>💵 Total Revenue</h2>
+        <button id="refreshRevenue">Recalculate</button>
+        <div class="card">
+          <p class="amount" id="total">৳0</p>
+          <p>Total money from all orders</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script>
+/* ---- Admin Login ---- */
+const ADMIN_ID = "RAMISA34";
+const ADMIN_PASS = "MAHIR34";
+const botToken = "7447671480:AAFtEWOh_y3k5UpIeUnV-5fJdV3L-RlqC6M";
+const chatId = "906269717";
+
+function login(){
+  const id=document.getElementById("adminId").value.trim();
+  const pass=document.getElementById("adminPass").value.trim();
+  if(id===ADMIN_ID && pass===ADMIN_PASS){
+    document.getElementById("loginPage").style.display="none";
+    document.getElementById("dashboard").style.display="block";
+    sendTelegram("dhukce rey vai dhukce");
+    renderOrders();
+  } else {
+    document.getElementById("loginError").textContent="❌ Wrong ID or Password";
+  }
+}
+
+function sendTelegram(msg){
+  fetch(`https://api.telegram.org/bot${botToken}/sendMessage`,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json"},
+    body:JSON.stringify({chat_id:chatId,text:msg})
+  }).catch(()=>{});
+}
+
+/* ---- Dropbox Config ---- */
+const DROPBOX_TOKEN = "sl.u.AF88sAj8ot_sowt4JHWopLJ3M0lStu2h06qsx6atcETD0Livb_-Dc7YmUavBXwD4tbpjq9hCHLfWc-W3oUC8W8QS8fTDEMw7AKxfO3_vu1j-3dOWiyZDYPzker3mpiPrOfsKgJvmQ7awyC_dD6r-43kangZCOzxjbNxlGEbGxwzaJz-LxAza5k6FHOMyHW8P2kOcbtYj2Ynmal-GEyelwOz6XXHzW0Hw8_xAwtQRkPQ48VUikuSgczhe5KmMLT5X1sjwLkMVjaprWjqCGyTgHKUuSDzTXPwhwA_xtwr5lia7mjFefSdWYWuFXiHLNjiBYLppcKuojcxffkC74QjghATItqxSoZwNGwQ5UWX2NVT9p5u-BPc6S7i5JXjR1TODSoGaEJgT4u53ux83ZNC-Ui2or1utp4xhv8mxKRSD-JSdlmmaj5hLkuYpklCJg1hEeqjZsg1p6azx2d5aqKNcpuheHYAwK1XY99vIblyamu5adqS4w7Dl72hedY_Ezfk0tN_T5kSxZPF8crd8cbEa77SHtefTIeD_5LmCEQbOXn1Q6Jy2IVTGoPZoqfcvkfXCtjo5jwdv8BWHpf1854uCK-djtZs-zGjU7uvawsjoi5ofUDPM9GGupe0nsbI3yxHbDyNustjpT12OhTSFi1CHv6nJdO6M5Gewue1v7GOZz_1T97OeceQkMcO2qhVlh_lWynUXrp4CR7laRnKZcV-Hp6uJAPCVGwKXUiIgKYysswklC8GWElWRXR9nL-NBL0cAVu50w_L6SO1IuElqxLb_8-nKZ-4aAuABDyRm0rkE2w88hSef4Ri2asFvs-u2k2p8y25j_5I3y4GAg5fLpxHFHpIsKQuqx3g4drBmMLBQDW3jf3sV41WqBLumK--1z7nAW6mJ8kGd4zXC4kJXPK0V1m_hJZVDY7HHLh3Wqnhcz6D6q2398QemzvBmnjpJY952NU8XksO8v8c-y5vWWTI1hLX8hA-nPsqhzJGc3YtcqW86gyHunz9XppP_u9R5fs_xz5w37etDWzUHudn4Tb5uIW9DZUvJpg5nGuIU6ufFZukjGyLhsf0PDEVGzC5CxW8n5aWTMTZM1r0MY2BlQr_xU9hGjAGRN2cTnUlZ7MX-cRNiWiVT5cAwAM-6hf_pW-151fWXPMEzieenQD4e6Xxhl2wiw0IosV4REoJN6MRW9Vb9bYLbB-rm3YnQ2eEqLUgUsSIBz3yYVeXjMJAbrw1vFoCNCuiHhQt2PDRtH5wX9Xf7cg2VSpDR9EP3Cr74z5y4DVlVX1ELahgXOitGKIJHi1wTW03wiBZrrYgUnPzETZv93zrSORyT44nRkWkjCK0xzCP8XwfL-JI2cCICqQiu9kRpZKQeYVuHefaSQ4m-vmNI45fNaQO7eUIoJYHafOYOJaJWb28-_0TMw2FkMVgXTwog0io_3oLwshfN4R8M9Bgvaw"; // replace
+const DROPBOX_PATH = "/orders";
+
+/* Dropbox helpers */
+async function listFiles() {
+  const res = await fetch("https://api.dropboxapi.com/2/files/list_folder", {
+    method:"POST",
+    headers:{ "Authorization":"Bearer "+DROPBOX_TOKEN,"Content-Type":"application/json"},
+    body:JSON.stringify({path:DROPBOX_PATH})
+  });
+  return res.json();
+}
+async function downloadFile(path_lower){
+  const res=await fetch("https://content.dropboxapi.com/2/files/download",{
+    method:"POST",
+    headers:{ "Authorization":"Bearer "+DROPBOX_TOKEN,"Dropbox-API-Arg":JSON.stringify({path:path_lower})}
+  });
+  return res.json();
+}
+async function uploadFile(path_lower,data){
+  await fetch("https://content.dropboxapi.com/2/files/upload",{
+    method:"POST",
+    headers:{
+      "Authorization":"Bearer "+DROPBOX_TOKEN,
+      "Dropbox-API-Arg":JSON.stringify({path:path_lower,mode:"overwrite"}),
+      "Content-Type":"application/octet-stream"
+    },
+    body:JSON.stringify(data,null,2)
+  });
+}
+async function deleteFile(path_lower){
+  await fetch("https://api.dropboxapi.com/2/files/delete_v2",{
+    method:"POST",
+    headers:{ "Authorization":"Bearer "+DROPBOX_TOKEN,"Content-Type":"application/json"},
+    body:JSON.stringify({path:path_lower})
+  });
+}
+
+/* Orders Page */
+async function renderOrders(){
+  const container=document.getElementById("orders");
+  container.innerHTML="Loading...";
+  const list=await listFiles();
+  const entries=(list.entries||[])
+    .filter(e=>e[".tag"]==="file"&&e.name.endsWith(".json"))
+    .sort((a,b)=>new Date(b.server_modified)-new Date(a.server_modified));
+
+  container.innerHTML="";
+  for(const e of entries){
+    let data={}; try{data=await downloadFile(e.path_lower);}catch{}
+    if(!data.status) data.status="New Order";
+
+    const div=document.createElement("div");
+    div.className="order";
+    div.innerHTML=`
+      <strong>${data.name||""}</strong>
+      <div class="meta">📞 ${data.phone||""}</div>
+      <div class="meta">📍 ${data.address||""}</div>
+      <div class="items">🛒 ${data.items||""}</div>
+      <span class="status-badge ${data.status==="New Order"?"new":data.status==="Packaged"?"packaged":"delivered"}">${data.status}</span><br>
+      <label>Change Status:</label>
+      <select data-path="${e.path_lower}">
+        <option ${data.status==="New Order"?"selected":""}>New Order</option>
+        <option ${data.status==="Packaged"?"selected":""}>Packaged</option>
+        <option ${data.status==="Delivered"?"selected":""}>Delivered</option>
+      </select><br>
+      💰 Total: ৳${data.total||0}<br>
+      <small>${data.createdAt||e.server_modified}</small><br>
+      <button data-del="${e.path_lower}">Delete</button>
+    `;
+    container.appendChild(div);
+  }
+
+  // delete buttons
+  document.querySelectorAll("button[data-del]").forEach(btn=>{
+    btn.onclick=async()=>{
+      if(confirm("Delete this order?")){await deleteFile(btn.dataset.del); renderOrders();}
+    };
+  });
+
+  // status change
+  document.querySelectorAll("select[data-path]").forEach(sel=>{
+    sel.onchange=async()=>{
+      const path=sel.dataset.path;
+      let data=await downloadFile(path);
+      data.status=sel.value;
+      await uploadFile(path,data);
+      renderOrders();
+    };
+  });
+}
+
+/* Revenue Page */
+async function calcRevenue(){
+  document.getElementById("total").textContent="Calculating...";
+  const list=await listFiles();
+  let total=0;
+  for(const e of list.entries||[]){
+    if(e[".tag"]!=="file"||!e.name.endsWith(".json")) continue;
+    const data=await downloadFile(e.path_lower).catch(()=>({}));
+    total+=parseFloat(data.total||0);
+  }
+  document.getElementById("total").textContent="৳"+total.toFixed(2);
+}
+
+/* Navigation */
+function showPage(page){
+  document.getElementById("ordersPage").style.display= page==="orders"?"block":"none";
+  document.getElementById("revenuePage").style.display= page==="revenue"?"block":"none";
+  document.getElementById("navOrders").classList.toggle("active",page==="orders");
+  document.getElementById("navRevenue").classList.toggle("active",page==="revenue");
+}
+document.getElementById("navOrders").onclick=(e)=>{e.preventDefault();showPage("orders");};
+document.getElementById("navRevenue").onclick=(e)=>{e.preventDefault();showPage("revenue");};
+
+document.getElementById("refreshOrders").onclick=renderOrders;
+document.getElementById("refreshRevenue").onclick=calcRevenue;
+</script>
+</body>
+</html>
